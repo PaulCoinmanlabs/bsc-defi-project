@@ -40,10 +40,35 @@ describe("UltimateBSCCoin Test", function () {
       expect(await token.symbol()).to.be.equal("UMOON");
     });
 
-    it("所有的代币都在部署者的手上",async function(){
-      const {token, owner} =  await loadFixture(deployTokenFixture)
+    it("所有的代币都在部署者的手上", async function () {
+      const { token, owner } = await loadFixture(deployTokenFixture);
       const totalSupply = await token.totalSupply();
-      expect(await token.balanceOf(owner.address)).to.be.equal(totalSupply)
-    })
+      expect(await token.balanceOf(owner.address)).to.be.equal(totalSupply);
+    });
+  });
+
+  describe("2. 交易开关测试", function () {
+    it("未开盘前，普通用户之间不允许转账", async function () {
+      const { token, user1, user2 } = await loadFixture(deployTokenFixture);
+      await token.transfer(user1.address, ethers.parseEther("1000"));
+      await expect(
+        token.connect(user1).transfer(user2.address, ethers.parseEther("100")),
+      ).to.be.revertedWith("Trading is not active");
+    });
+
+    it("开启交易后 普通用户可以转账", async function () {
+      const { token, user1, user2 } = await loadFixture(deployTokenFixture);
+      await token.transfer(user1.address, ethers.parseEther("1000"));
+      await token.enableTrading();
+
+      await token.connect(user1).transfer(user2.address, ethers.parseEther("100"));
+
+      expect(await token.balanceOf(user1.address)).to.be.equal(
+        ethers.parseEther("900"),
+      );
+      expect(await token.balanceOf(user2.address)).to.be.equal(
+        ethers.parseEther("100"),
+      );
+    });
   });
 });
